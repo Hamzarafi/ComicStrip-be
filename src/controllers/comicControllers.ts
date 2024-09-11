@@ -4,6 +4,14 @@ import { getDatabase } from "../db/database";
 
 let latestComicNumber: number | null = null; // Cache for latest Comic
 
+const getLatestComic = async () => {
+  if (!latestComicNumber) await fetchLatestComic();
+  if (latestComicNumber == null) {
+    throw new Error("Could not fetch the latest comic number.");
+  }
+  return latestComicNumber;
+};
+
 const fetchLatestComic = async () => {
   const response = await axios.get("https://xkcd.com/info.0.json");
   latestComicNumber = response.data.num;
@@ -43,8 +51,7 @@ export const getComic = async (req: Request, res: Response) => {
     await incrementComicViews(comicViews.comic_num);
     comicViews.views += 1;
 
-    if (!latestComicNumber) await fetchLatestComic();
-    if (latestComicNumber == data.num) latest = true;
+    if (await getLatestComic() == data.num) latest = true;
 
     res.status(200).json({ ...data, views: comicViews.views, latest });
   } catch (error) {
@@ -56,7 +63,7 @@ export const getComic = async (req: Request, res: Response) => {
 // Function to get a random comic
 export const getRandomComic = async (req: Request, res: Response) => {
   try {
-    const randomComicNum = Math.floor(Math.random() * 2982 - 1) + 1; // Random comic number
+    const randomComicNum = Math.floor(Math.random() * await getLatestComic() - 1) + 1; // Random comic number
     res.status(200).json({ num: randomComicNum });
   } catch (error) {
     console.error("Error fetching random comic number:", error);
